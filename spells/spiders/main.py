@@ -21,28 +21,63 @@ class MainSpider(scrapy.Spider):
         self.driver.get(response.url)
         foundFirstBtn = WebDriverWait(self.driver, 10).until(
             EC.presence_of_all_elements_located(
-                (By.XPATH, "//button[contains(text(), 'Got It!')]")
+                (By.XPATH, "//button[contains(text(), 'Continue Using Site')]")
             )
         )
         if foundFirstBtn:
             firstBtn = self.driver.find_element_by_xpath(
-                "//button[contains(text(), 'Got It!')]"
+                "//button[contains(text(), 'Continue Using Site')]"
             )
-            firstBtn.click()
             time.sleep(3) # Needed because the second button scrolls up from bottom so Selenium can't "scroll to it".
+            firstBtn.click()
             foundSecondBtn = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_all_elements_located(
-                    (By.XPATH, "//button[contains(text(), 'Continue Using Site')]")
+                    (By.XPATH, "//button[contains(text(), 'Got It!')]")
                 )
             )
             if foundSecondBtn:
+                time.sleep(3) # Needed because the second button scrolls up from bottom so Selenium can't "scroll to it".
                 secondBtn = self.driver.find_element_by_xpath(
-                    "//button[contains(text(), 'Continue Using Site')]"
+                    "//button[contains(text(), 'Got It!')]"
                 )
                 secondBtn.click()
                 spells = self.driver.find_elements_by_xpath(
                     "//a[@class='listview-cleartext']"
                 )
+                lastSpell = self.driver.find_element_by_xpath(
+                    "//a[@class='listview-cleartext q1']"
+                )
                 for spell in spells:
-                    print(spell.get_attribute("href"))
-                    self.spell_urls.append(spell.get_attribute("href"))
+                    self.spell_urls.append(str(spell.get_attribute("href")))
+                self.spell_urls.append(str(lastSpell.get_attribute("href")))
+        if len(self.spell_urls) != 0:
+            with open("test.txt", 'a', encoding='utf8') as f:
+                for spell in self.spell_urls:
+                    self.driver.get(spell)
+                    # Get name.
+                    nameText = self.driver.find_element_by_xpath(
+                        "//h1[@class='heading-size-1']"
+                    ).text
+                    # Get level.
+                    levelText = self.driver.find_element_by_xpath(
+                        "//div[contains(text(), 'Level:')] | //div[contains(text(), 'Requires level')]"
+                    ).text
+                    # Get rank.
+                    rankText = self.driver.find_element_by_xpath(
+                        "//b[@class='q0']"
+                    ).text
+                    # Get texture.
+                    textureText = self.driver.find_element_by_xpath(
+                        "//span[@class='iconsmall']/.."
+                    ).text
+                    # Get spell ID (which is part of the URL, so slice it).
+                    id = spell[34:]
+                    # Conditionally slice level text (any level < 10 should only slice -1).
+                    levelText = levelText[-2:] if " " not in levelText[-2:] else levelText[-1]
+                    # Conditionally slice rank text (if rank > 10 then we need the last two, otherwise only last 1).
+                    rankText = rankText[-2:] if len(rankText) > 6 else rankText[-1]
+                    f.write("Name: " + nameText + "\n" + "Level: " + levelText
+                        + "\n" + "Rank: " + rankText + "\n" + "ID: " + id + "\n"
+                        + "Texture: Interface/ICONS/" + textureText + "\n\n")
+            f.close()
+        self.driver.close()
