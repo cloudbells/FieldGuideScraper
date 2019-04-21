@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import scrapy
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -6,6 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import time
+
+#TODO: FORMAT OUTPUT------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class MainSpider(scrapy.Spider):
     name = 'main'
@@ -52,6 +53,7 @@ class MainSpider(scrapy.Spider):
                 self.spell_urls.append(str(lastSpell.get_attribute("href")))
         if len(self.spell_urls) != 0:
             with open("test.txt", 'a', encoding='utf8') as f:
+                f.write("FieldGuideMageSpells = {\n"
                 for spell in self.spell_urls:
                     self.driver.get(spell)
                     # Get name.
@@ -76,8 +78,6 @@ class MainSpider(scrapy.Spider):
                     levelText = levelText[-2:] if " " not in levelText[-2:] else levelText[-1]
                     # Conditionally slice rank text (if rank > 10 then we need the last two, otherwise only last 1).
                     rankText = rankText[-2:] if len(rankText) > 6 else rankText[-1]
-                    f.write("Name: " + nameText + "\n" + "Level: " + levelText
-                        + "\n" + "Rank: " + rankText + "\n" + "ID: " + id + "\n"
-                        + "Texture: Interface/ICONS/" + textureText + "\n\n")
+                # close root table \n}
             f.close()
         self.driver.close()
