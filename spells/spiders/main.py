@@ -19,7 +19,7 @@ class Spell:
 
 class MainSpider(scrapy.Spider):
     name = 'main'
-    start_urls = ["http://classic.wowhead.com/abilities/class:8/"]
+    start_urls = ["https://classic.wowhead.com/priest-abilities#0+2+20"]
     spell_urls = []
     spellCollection = []
 
@@ -39,13 +39,13 @@ class MainSpider(scrapy.Spider):
     def clickCookies(self):
         foundFirstBtn = WebDriverWait(self.driver, 10).until(
             EC.presence_of_all_elements_located(
-                (By.XPATH, "//button[contains(text(), 'Continue Using Site')]")
+                (By.XPATH, "//span[contains(text(), 'Continue to site')]/..")
             )
         )
         if foundFirstBtn:
             print("Found first button, sleeping...")
             firstBtn = self.driver.find_element_by_xpath(
-                "//button[contains(text(), 'Continue Using Site')]"
+                "//span[contains(text(), 'Continue to site')]/.."
             )
             time.sleep(3) # Needed because the second button scrolls up from bottom so Selenium can't "scroll to it".
             firstBtn.click()
@@ -69,7 +69,7 @@ class MainSpider(scrapy.Spider):
         )
         for spell in spells:
             self.spell_urls.append(str(spell.get_attribute("href")))
-        self.driver.get("https://classic.wowhead.com/abilities/class:8#100+2+1")
+        self.driver.get("https://classic.wowhead.com/priest-abilities#100+2+20")
         spells = self.driver.find_elements_by_xpath(
             "//a[@class='listview-cleartext'] | //a[@class='listview-cleartext q1']"
         )
@@ -87,9 +87,12 @@ class MainSpider(scrapy.Spider):
                 ).text
                 print("Getting level of spell...")
                 # Get level.
-                levelText = self.driver.find_element_by_xpath(
-                    "//div[contains(text(), 'Level:')] | //div[contains(text(), 'Requires level')]"
-                ).text
+                try:
+                    levelText = self.driver.find_element_by_xpath(
+                        "//div[contains(text(), 'Level:')] | //div[contains(text(), 'Requires level')]"
+                    ).text
+                except NoSuchElementException:
+                    levelText = "1" # Probably a talent, will fix manually later.
                 print("Getting rank of spell...")
                 # Get rank.
                 try:
@@ -111,12 +114,13 @@ class MainSpider(scrapy.Spider):
                 rankText = rankText[-2:] if len(rankText) > 6 else rankText[-1]
                 self.spellCollection.append(Spell(levelText, nameText, rankText, textureText, id))
             self.driver.close()
+            self.spellCollection.sort(key = lambda s: s.level)
 
     # Formats each spell and outputs it to a file.
     def writeToFile(self):
         with open("test.txt", 'a', encoding='utf8') as f:
             print("Outputting to file...")
-            f.write("FieldGuideMageSpells = {\n")
+            f.write("local _, FieldGuide = ...\n\nFieldGuide.SHAMAN = {\n")
             index = 1
             lastLevel = 2
             f.write("\t[" + str(lastLevel) + "] = {\n")
